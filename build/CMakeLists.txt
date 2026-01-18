@@ -1,5 +1,9 @@
-#Build system for Scurry program
+#=================================#
+# Build system for Scurry program #
+#=================================#
 
 cmake_minimum_required(VERSION 3.18)
 
-project(Scurry DESCRIPTION  LANGUAGES C)
+project(Scurry DESCRIPTION LANGUAGES C CXX)
+
+
