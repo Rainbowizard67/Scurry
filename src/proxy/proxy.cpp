@@ -1,7 +1,7 @@
 #include "../include/proxy.hpp"
 
 namespace ScurryProxy {
-    
+
     class ProxyEventLoop {
     public:
         int epoll_fd;
@@ -72,8 +72,8 @@ namespace ScurryProxy {
 
         }
 
-        
-    
+
+
     private:
         void set_nonblocking(int sock) {
             int flags = fcntl(sock, F_GETFL, 0);
@@ -81,7 +81,7 @@ namespace ScurryProxy {
         }
 
         int CreateServerSocketInterface() {
-            
+
         }
         
         

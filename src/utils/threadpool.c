@@ -15,7 +15,7 @@ static tpool_work_t* tpool_work_create(thread_func_t func, void* arg) {
     work->func = func;
     work->arg = arg;
     work->next = NULL;
-    
+
     return work;
 }
 
