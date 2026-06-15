@@ -1,4 +1,5 @@
 #include "../include/settings.h"
+#include <yaml.h>
 
 //Start structure settings
 struct handler_settings {
@@ -12,7 +13,9 @@ typedef struct handler_settings handler_settings_t;
 
 struct network_settings {
     unsigned short port_number;
+    bool dual_stack_enabled;
     char ipv4_address[16];
+    char ipv6_address[46];
     unsigned short backlog;
     unsigned short max_events;
 };
@@ -53,64 +56,54 @@ static const cyaml_schema_value_t schema = {
 };
 //End CYAML schema settings and format
 
-//Initialization of the data from the structs into the hash table
-static hashTable_t* init_hashtable(settings_t* s) {
-    hashTable_t* ht = create_table(HT_SIZE);
-    
-    insert(ht, "doc_root", s->handler->doc_root, strlen(s->handler->doc_root) + 1);
-    insert(ht, "default_path", s->handler->default_path, strlen(s->handler->default_path) + 1);
-    insert(ht, "keep_alive", &(s->handler->keep_alive), sizeof(s->handler->keep_alive));
-    
-    insert(ht, "port_number", &(s->network->port_number), sizeof(s->network->port_number));
-    insert(ht, "ipv4_address", s->network->ipv4_address, strlen(s->network->ipv4_address) + 1);
-    insert(ht, "backlog", &(s->network->backlog), sizeof(s->network->backlog));
-    insert(ht, "max_events", &(s->network->max_events), sizeof(s->network->max_events));
+struct settings_t parse_yaml(yaml_parser_t *parser) {
+    yaml_token_t token;
 
-    return ht;
+    do {
+        yaml_parser_scan(&parser, &token);
+        switch(token.type)) {
+            case YAML_STREAM_START_TOKEN:
+            case YAML_STREAM_END_TOKEN:
+            case YAML_KEY_TOKEN:
+            case YAML_VALUE_TOKEN:
+
+            default:
+                yaml_token_delete(&token)
+        }
+    } while (token.type != YAML_STREAM_END_TOKEN);
+
+    yaml_token_delete(&token);
 }
 
-//Loads yaml into structures then passes structures to hash table init
-static hashTable_t* load_yaml(char* filepath) {
-    const cyaml_config_t config = {
-        .log_level = CYAML_LOG_DEBUG,
-        .log_fn = cyaml_log,
-        .mem_fn = cyaml_mem,
-        .log_level = CYAML_LOG_WARNING,
-    };
+/*
+Function that initializes the yaml parser with the given file fd and returns the parser.
+Return yaml_parser_t, Input FILE *file
+*/
+yaml_parser_t init_yaml(FILE *file) {
+    yaml_parser_t parser;
 
-    settings_t* s = NULL;
+    if(!yaml_parser_initialize(&parser)) {
+        perror("Error yaml_parser_initialize");
+        exit(EXIT_FAILURE);
+    }
+    if(file == NULL) {
+        perror("Error fopen");
+        exit(EXIT_FAILURE);
+    }
 
-    cyaml_err_t err = cyaml_load_file(filepath, &config, &schema, (void **)&s, NULL);
+    yaml_parser_set_input_file(&parser, file);
 
-    if(err != CYAML_OK) {fprintf(stderr, "CYAML load error: %s\n", cyaml_strerror(err)); exit(EXIT_FAILURE);};
-
-    if(s == NULL) {fprintf(stderr, "CYAML failed: settings pointer is NULL\n"); exit(EXIT_FAILURE);}
-
-    hashTable_t* htable = init_hashtable(s);
-
-    err = cyaml_free(&config, &schema, s, 0);
-
-    if(err != CYAML_OK) {fprintf(stderr, "CYAML free error: %s\n", cyaml_strerror(err)); exit(EXIT_FAILURE);};
-
-    return htable;
+    return parser;
 }
 
-//General settings function that starts initialization of everything
-hashTable_t* main_settings(char* fp) {
-
-    char* filepath = "/home/alexrob67/C-Webserver/config/wsconfig.yaml";
-
-    if(access(filepath, F_OK) != 0) {printf("Error config file does not exist!\n"); exit(EXIT_FAILURE);}
-    
-    return load_yaml(filepath);
-}
-
-//Wrapper function to make output look better using settings data
-void* get_value(hashTable_t* ht, char* key) {
-    return search(ht, key);
-}
-
-//Wrapper function to make program look better when freeing
-void free_settings(hashTable_t* ht) {
-    free_table(ht);
+/*
+Function that cleans up the yaml parser and closes the file.
+Return void, Input yaml_parser_t *parser & FILE *file
+*/
+void clean_parser(yaml_parser_t *parser, FILE *file) {
+    if(fclose(file) != 0) {
+        perror("Error fclose");
+        exit(EXIT_FAILURE);
+    }
+    yaml_parser_delete(parser);
 }
